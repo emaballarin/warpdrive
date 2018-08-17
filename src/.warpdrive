@@ -2,7 +2,7 @@
 ##  Warpdrive -- Tag And Warp utility functions  ##
 ###################################################
 # Easily tag locations in deep space and easily warp to them
-# with a few keystrokes.
+# with a few keystrokes. Now refactored. [v. 0.2.1]
 #
 # Authors: Joeri Hermans
 #          Benjamin Shanahan
@@ -108,25 +108,49 @@ function warp {
     eval $reset_colors
 }
 
-
+# WARNING: The following implementation just adds functionality upon the original, as explained in documentation. However, its internals have been reworked.
 function tag {
-    # Check if an argument is specified.
     if [ $# -eq 0 ]; then
-        # Let ln write folder name to warp locations.
         tag="${PWD##*/}"
+        location="$(pwd)"
+        print_warning "No directory name specified, assuming current directory $(eval $set_bold)$location$(eval $reset_colors) to be tagged"
         print_warning "No tagname specified, taking $(eval $set_bold)$tag$(eval $reset_colors) as tag name"
+        tag_location="$WARP_LOCATIONS/$tag"
+        # Check if a symlink with this tag already exists.
+        if [ -L "$tag_location" ]; then
+            print_error "Tag $(eval $set_bold)$tag$(eval $reset_colors) already exists."
+            return
+        fi
+        print_info "Tagged $location as $tag"
+    elif [ $# -eq 1 ]; then
+        tag="$1"
+        location="$(pwd)"
+        print_warning "No directory name specified, assuming current directory $(eval $set_bold)$location$(eval $reset_colors) to be tagged"
+        tag_location="$WARP_LOCATIONS/$tag"
+        # Check if a symlink with this tag already exists.
+        if [ -L "$tag_location" ]; then
+            print_error "Tag $(eval $set_bold)$tag$(eval $reset_colors) already exists."
+            return
+        fi
+        print_info "Tagged $location as $tag"
     else
         tag="$1"
-    fi
-    location="$WARP_LOCATIONS/$tag"
-    # Check if a symlink with this tag already exists.
-    if [ -L "$location" ]; then
-        print_error "Tag $(eval $set_bold)$tag$(eval $reset_colors) already exists."
-        return
+        location="$2"
+        tag_location="$WARP_LOCATIONS/$tag"
+        # Check if a symlink with this tag already exists.
+        if [ -L "$tag_location" ]; then
+            print_error "Tag $(eval $set_bold)$tag$(eval $reset_colors) already exists."
+            return
+        fi
+        # Warn if trying to tag a nonexistent path
+        if [ ! -L "$location" ]; then
+            print_warning "Tagged $(eval $set_bold)$location$(eval $reset_colors) as $(eval $set_bold)$tag$(eval $reset_colors), but path does not exist yet."
+            print_info "You are allowed to do so, if it's what you want... just beware!"
+        fi
+
     fi
     # Save the tag.
-    ln -s "$(pwd)" "$WARP_LOCATIONS/$tag"
-    print_info "Tagged $(pwd) as $tag"
+    ln -s "$location" "$tag_location"
     eval $reset_colors
 }
 
@@ -236,7 +260,7 @@ function retag {
 
 function tags {
     echo "$(eval $set_bold)Listing available tags and destinations:$(eval $reset_colors)"
-    ls -l "$WARP_LOCATIONS" | sed 's/  / /g' | cut -d' ' -f10-
+    ls -l "$WARP_LOCATIONS" | sed 's/  / /g' | cut -d' ' -f9-
     echo ' '
     eval $reset_colors
 }

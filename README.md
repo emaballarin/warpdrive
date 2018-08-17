@@ -22,9 +22,13 @@ The script enables the following shell commands, and respective autocompletion.
 Tags a directory with a tagname and adds it to the taglist.
 
 ```bash
-tag [tagname]
+tag [tagname] [dirpath]
 ```
-`[tagname]` is an optional argument. If no tagname is specified, the current directory name will be used as such.
+`[tagname]` and `[dirpath]` are **both** optional arguments:
+
+- If no argument is specified, the current directory will be tagged with its own name as tagname;
+- If only one argument is passed, it is assumed to be a `[tagname]` and the current directory will be tagged with such name;
+- If both arguments are passed, the full path `[dirpath]` will be tagged as `[tagname]`.
 
 ### untag
 
@@ -84,6 +88,10 @@ Another breaking change is present with regards to multiply-tagged directories.
 The refactored version replicates this behaviour for the sake of command essentiality, but deleting the **first** of the tags, in alphabetical order.
 
 This may be useful - at the cost of additional failures - to guard the user against accidental (existent) tag deletions when invoking nonexistent tag deletion from a tagged directory.
+
+The `tag` function has been enhanced in a non-breaking way. It is now possible to tag directories while not being inside them, just by passing the full path as a second argument. The one-argument version is fully backwards-compatible.
+
+This allows, at the cost of a warning, to even tag non-already-existing directories, which may be useful in scripts or with automatically-generated paths.
 
 The remaining, minor, changes are non-breaking and mainly revolve around improved robustness against paths with spaces, improved documentation, better compatibility with shells installed in non-standard locations, typesetting enhancements
 
