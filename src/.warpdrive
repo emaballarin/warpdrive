@@ -1,16 +1,16 @@
 ###################################################
 ##  Warpdrive -- Tag And Warp utility functions  ##
 ###################################################
-# Easily tag locations in deep space and easily warp to them
+# Easily tag locations in `deep space` and easily `warp` to them
 # with a few keystrokes. Now refactored. [v. 0.2]
 #
-# Authors: Joeri Hermans
-#          Benjamin Shanahan
-#          Emanuele Ballarin
+# Authors: Joeri Hermans      (original author)
+#          Benjamin Shanahan  (retag functionality)
+#          Emanuele Ballarin  (refactoring)
 ###
 
 
-## DEFINITIONS ##
+## PRELIMINARY DEFINITIONS ##
 
 # Set terminal colors.
 set_red='tput setaf 1'
@@ -28,7 +28,7 @@ mkdir -p $WARP_LOCATIONS
 
 ## COMMAND AUTOCOMPLETION ##
 if [ ! -z "$ZSH_VERSION" ]; then
-    # This is ZSH
+    # The script is running in ZSH
     function _zsh_auto_complete {
         reply=($(ls $WARP_LOCATIONS))
     }
@@ -39,7 +39,7 @@ if [ ! -z "$ZSH_VERSION" ]; then
     compctl -K _zsh_auto_complete retag
 
 elif [ ! -z "$BASH_VERSION" ]; then
-    # This is BASH
+    # The script is running in BASH
     function _bash_auto_complete {
         local curw=${COMP_WORDS[COMP_CWORD]}
         local wordlist=$(find "$WARP_LOCATIONS" -type l -printf "%f\n")
@@ -51,7 +51,7 @@ elif [ ! -z "$BASH_VERSION" ]; then
     echo BASH
 
 else # (or in case of error; i.e. csh)
-    :   # Do nothing, disable autocompletion
+    :   # Do nothing, no autocompletion
 fi
 
 
@@ -81,160 +81,163 @@ function print_info {
 }
 
 
-## UTILITY FUNCTIONS ##
+## MAIN FUNCTIONS ##
 
 function warp {
-    if [ $# -eq 0 ]; then
+    if [ $# -eq 0 ]; then   # Call with no arguments
         print_error "No warp argument has been supplied."
         eval $reset_colors
         return
     fi
 
     location="$WARP_LOCATIONS/$1"
-    if [ ! -L "$location" ]; then
+
+    if [ ! -L "$location" ]; then   # Tag does not exist
         print_error "Unknown tag."
-    else
+    else                            # Tag exists
         destination="$(readlink $location)"
         print_info "Warping to $destination."
         cd -P "$destination"
     fi
+
     eval $reset_colors
 }
 
 # WARNING: The following implementation just adds functionality upon the original, as explained in documentation. However, its internals have been reworked.
 function tag {
-    if [ $# -eq 0 ]; then
+    if [ $# -eq 0 ]; then   # Call with no arguments => Tag current directory with its name
         tag="${PWD##*/}"
         location="$(pwd)"
         print_warning "No directory name specified, assuming current directory $(eval $set_bold)$location$(eval $reset_colors) to be tagged"
         print_warning "No tagname specified, taking $(eval $set_bold)$tag$(eval $reset_colors) as tag name"
         tag_location="$WARP_LOCATIONS/$tag"
 
-        if [ -L "$tag_location" ]; then
+        if [ -L "$tag_location" ]; then     # Tag name already exists
             print_error "Tag $(eval $set_bold)$tag$(eval $reset_colors) already exists."
             return
         fi
-        print_info "Tagged $location as $tag"
-    elif [ $# -eq 1 ]; then
+
+        print_info "Tagged $location as $tag"   # Normal execution message (0 args)
+
+    elif [ $# -eq 1 ]; then # Call with 1 argument => Tag current directory with given name
         tag="$1"
         location="$(pwd)"
         print_warning "No directory name specified, assuming current directory $(eval $set_bold)$location$(eval $reset_colors) to be tagged"
         tag_location="$WARP_LOCATIONS/$tag"
 
-        if [ -L "$tag_location" ]; then
+        if [ -L "$tag_location" ]; then # Tag name already exists
             print_error "Tag $(eval $set_bold)$tag$(eval $reset_colors) already exists."
             return
         fi
-        print_info "Tagged $location as $tag"
-    else
+
+        print_info "Tagged $location as $tag"   # Normal execution message (1 arg)
+
+    else    # Call with 2 arguments => Tag with given name (1st arg) given directory, full path (2nd argument)
         tag="$1"
         location="$2"
         tag_location="$WARP_LOCATIONS/$tag"
 
-        if [ -L "$tag_location" ]; then
+        if [ -L "$tag_location" ]; then # Tag name already exists
             print_error "Tag $(eval $set_bold)$tag$(eval $reset_colors) already exists."
             return
         fi
-        # Warn if trying to tag a nonexistent path
-        if [ ! -e "$location" ]; then
+
+        if [ ! -e "$location" ]; then   # Warn if trying to tag a nonexistent path (allowed, though)
             echo "$location"
             print_warning "Tagged $(eval $set_bold)$location$(eval $reset_colors) as $(eval $set_bold)$tag$(eval $reset_colors), but path does not exist yet."
             print_info "You are allowed to do so, if it's what you want... just beware!"
         fi
-        print_info "Tagged $location as $tag"
 
+        print_info "Tagged $location as $tag"   # Normal execution message (2 args)
     fi
-    # Save the tag.
-    ln -s "$location" "$tag_location"
+
+    ln -s "$location" "$tag_location"   # Normal execution
     eval $reset_colors
 }
 
 
-# WARNING: The following implementation differs from the original, but it is more faithful to documentation.
+# WARNING: The following implementation differs from the original, but it is more faithful to original documentation.
 function untag {
-    # Check if a tagname has been specified.
-    if [ $# -eq 0 ]; then
+    if [ $# -eq 0 ]; then   # Call with no arguments => Remove tag associated to current directory (1st in alph. order, if many)
         current_directory="$(pwd)"
         print_warning "No tagname specified, assuming removal of tag associated to directory $(eval $set_bold)$current_directory$(eval $reset_colors)"
         eval $reset_colors
-        # If not, look for current directory tag
-        if [ -z "$(ls "$WARP_LOCATIONS"/)" ]; then  # Empty directory: do not search inside!
+        # Lookup tags for the one related to current directory
+        if [ -z "$(ls "$WARP_LOCATIONS"/)" ]; then  # Directly skip, if no tags exist
             unset -v tag
         else
-            for f in "$WARP_LOCATIONS"/*
+            for f in "$WARP_LOCATIONS"/*    # Search
             do
                 file="$(readlink "$f")"
                 if [ "$file" = "$current_directory" ]; then
-                    # And set it explicitly
-                    tag="$(basename "$f")"
+                    tag="$(basename "$f")"                  # Set first found tag...
                     location="$WARP_LOCATIONS/$tag"
                     print_info "Found tag: $tag Removing it"
                     eval $reset_colors
-                    break
+                    break                                   # ... and exit.
                 else
                     # If not found, unset tag explicitly
                     unset -v tag
                 fi
             done
         fi
-    else
 
+    else    # Call with 1 argument => Remove given tag
         tag="$1"
         location="$WARP_LOCATIONS/$tag"
+        # If nonexistent found, unset tag explicitly
         if [ ! -L "$location" ]; then
-            unset -v tag   # Unless it has never been defined
+            unset -v tag
         fi
     fi
 
-    if [ -z ${tag+x} ]; then    # tag is UNSET
+    # Command execution
+    if [ -z ${tag+x} ]; then    # tag is unset
         print_error "Tag does not exist."
-    else
-        rm -if "$location"
+    else                        # tag is set
+        rm -if "$location"  # Normal execution
         print_info "Removed tag."
     fi
-
     eval $reset_colors
 }
 
 
-# WARNING: The following implementation differs from the original, but it is more faithful to documentation.
-#          The following implementation is equivalent to the one for `untag`
+# WARNING: The following implementation differs from the original, but it is more faithful to original documentation.
 function retag {
-    if [ $# -eq 0 ]; then
+    if [ $# -eq 0 ]; then   # Call with no arguments => Assume user meant `tag` instead of `retag`
         print_warning "No name specified for retag. You cannot call 'retag' with no arguments. Assuming you meant to call 'tag'."
-        print_info "Calling 'tag' for you!"
-        # Boilerplate (from tag function)
+        print_info "Calling 'tag' for you!" # Be friendly and `intelligent`
+
+       ## START BOILERPLATE CODE: Copy of tag function, call with 0 arguments || Update accordingly if it is edited!
         tag="${PWD##*/}"
         location="$(pwd)"
         print_warning "No directory name specified, assuming current directory $(eval $set_bold)$location$(eval $reset_colors) to be tagged"
         print_warning "No tagname specified, taking $(eval $set_bold)$tag$(eval $reset_colors) as tag name"
         tag_location="$WARP_LOCATIONS/$tag"
-        # Check if a symlink with this tag already exists.
         if [ -L "$tag_location" ]; then
             print_error "Tag $(eval $set_bold)$tag$(eval $reset_colors) already exists."
             return
         fi
         print_info "Tagged $location as $tag"
         ln -s "$location" "$tag_location"
-        # End boilerplate (from tag function)
+       ## END BOILERPLATE CODE
+
         eval $reset_colors
         return
-    fi
-    # If only one argument specified, assume that this is the retag name, and
-    # take the current directory tag as the tagname to rename.
-    if [ $# -eq 1 ]; then
+
+    elif [ $# -eq 1 ]; then # Call with 1 argument => Rename tag associated to current directory with given tag name
         new_tag="$1"
         current_directory="$(pwd)"
         eval $reset_colors
-        unset -v tag
-        if [ -z "$(ls "$WARP_LOCATIONS"/)" ]; then  # Empty directory: do not search inside!
+
+        # START: Exactly the same search `routine` used for the `untag` function (slight changes in messages!)
+        if [ -z "$(ls "$WARP_LOCATIONS"/)" ]; then
             unset -v tag
         else
             for f in "$WARP_LOCATIONS"/*
             do
                 file="$(readlink "$f")"
                 if [ "$file" = "$current_directory" ]; then
-
                     tag="$(basename "$f")"
                     print_warning "Taking $(eval $set_bold)$new_tag$(eval $reset_colors) as new name; taking tag associated to current directory $(eval $set_bold)$current_directory$(eval $reset_colors) as tag to be renamed"
                     print_info "Found tag: $tag. Setting it as the tag to be renamed"
@@ -242,17 +245,17 @@ function retag {
                     eval $reset_colors
                     break
                 else
-                    # If not found, unset tag explicitly
                     unset -v tag
                 fi
             done
         fi
-        # Be friendly: tag current directory if needed and exit
-        if [ -z ${tag+x} ]; then
-            tag="$1"
+        # END search `routine`
+
+        if [ -z ${tag+x} ]; then    # Tag unset => no tag (that is: associated to current directory) to be renamed
+            tag="$1"                # The user wants tag associated to current directory to have given name: tag it, simply...
             location="$WARP_LOCATIONS/$tag"
-            # Unless it causes collisions
-            if [ -L "$location" ]; then
+
+            if [ -L "$location" ]; then # ...unless given tag name already exists: then, no reasonable thing to do.
                 print_error "You asked to retag current directory $(eval $set_bold)$current_directory$(eval $reset_colors), but no tag exists for it. A tag with name $(eval $set_bold)$tag$(eval $reset_colors) already exists, too."
                 eval $reset_colors
                 return
@@ -263,11 +266,13 @@ function retag {
                 return
             fi
         fi
-    else
+
+    else    # Call with 2 arguments => Rename 1st tag name to 2nd tag name...
         tag="$1"
         new_tag="$2"
         location="$WARP_LOCATIONS/$tag"
-        if [ ! -L "$location" ]; then
+
+        if [ ! -L "$location" ]; then   # ...unless name specified does not exist...
             print_error "Tag specified for renaming does not exist."
             eval $reset_colors
             return
@@ -275,14 +280,14 @@ function retag {
     fi
 
     new_location="$WARP_LOCATIONS/$new_tag"
-    # Before we retag anything, let's check that new_tag doesn't already exist.
-    if [ -L $new_location ]; then
+
+    if [ -L $new_location ]; then   # ...or unless new tag name already exists
         print_error "New tagname must not already be a tagname."
         eval $reset_colors
         return
     fi
 
-    mv "$location" "$new_location"
+    mv "$location" "$new_location"  # Normal execution
     print_info "Renamed tag."
     eval $reset_colors
 }
@@ -290,7 +295,7 @@ function retag {
 
 function tags {
     echo "$(eval $set_bold)Listing available tags and destinations:$(eval $reset_colors)"
-    ls -l "$WARP_LOCATIONS" | sed 's/  / /g' | cut -d' ' -f9-
-    echo ' '
+    ls -l "$WARP_LOCATIONS" | sed 's/  / /g' | cut -d' ' -f9-   # sed/cut magic: double spaces to spaces; remove first 9 information `slots` and their spaces
+    echo ' '                                                    # Result: [tag name] -> [tag full path]
     eval $reset_colors
 }
