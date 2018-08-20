@@ -1,11 +1,9 @@
 # Tag And Warp (a.k.a. `warpdrive`)
 
-Easily tag locations in *deep space* (directories) and easily *warp* (like the *space drive*) to them with a few keystrokes. Now refactored (i.e. v. 0.2+) *a.k.a. overengineered*.
+Easily tag locations in *deep space* (directories) and easily *warp* (like the *space drive*) to them with a few keystrokes.
+<br>Now refactored (`v. 0.2+`) *a.k.a. overengineered*, but still stable.
 
-**NOTICE:** Please, be warned that this *piece of software* is undergoind a refactoring. It means that:
-- This documentation is still valid, but may contain non-breaking differences with the actual code;
-- The comments to the code are from previous versions, so they are actually pretty random;
-- The content of the repository may change rapidly.
+**NOTICE:** While this *piece of software* shares the name, and the original codebase, with the [*original* `warpdrive`](https://github.com/JoeriHermans/warpdrive), it has been heavily refactored in its internals. The features has been preserved as similar to the original as possible, but some breaking changes are present nevertheless.
 
 ---
 
@@ -13,7 +11,7 @@ Easily tag locations in *deep space* (directories) and easily *warp* (like the *
 
 Installation is quite straightforward:
 1) Copy the file `[path-to-repo]/src/.warpdrive` to `[some-location]`;
-2) Depending on the shell you are using (`bash` or `zsh`), add the following line to `~/.bashrc` and/or `~/.zsh` respectively:
+2) Depending on the shell you are using (`bash` or `zsh`, or both), add the following line to `~/.bashrc` and/or `~/.zsh` respectively:
 <br>`source "[some-location]/.warpdrive"`
 
 ---
@@ -35,6 +33,9 @@ tag [tagname] [dirpath]
 - If only one argument is passed, it is assumed to be a `[tagname]` and the current directory will be tagged with such name;
 - If both arguments are passed, the full path `[dirpath]` will be tagged as `[tagname]`.
 
+If the command requires the creation of an already-existing tag (i.e. with the same name), it fails.
+<br> It is possible (with a warning) to create tags pointing to *not-yet-existing* directories, which may be useful in some specific cases.
+
 ### untag
 
 Removes a tag from the taglist.
@@ -42,6 +43,27 @@ Removes a tag from the taglist.
 untag [tagname]
 ```
 `[tagname]` is an optional argument. If no tagname is specified, and you are in a tagged directory, it will automatically remove such directory from the taglist.
+
+If such tag does not exist, the command fails.
+
+### retag
+
+Rename an existing tag in the taglist.
+
+```bash
+retag [tagname] <newname>
+```
+
+`[tagname]` is an optional argument, whereas `<newname>` is supposed to be provided:
+
+- If no argument is provided, it is assumed that the user wanted to invoke the `tag` command instead of `retag`, and the former is executed as is (i.e. with no arguments).
+- If an argument is passed:
+  - If you are in a tagged directory, the tag associated to current directory will be renamed to the tagname provided.
+  - If you are un an untagged directory, the command is executed as `tag` with one argument, thus tagging the current directory with given tagname.
+- If both arguments are passed, the first (if existing) tag is renamed with the second tagname. If the first tag does not exist, the command fails.
+-
+If the command requires the creation of an already-existing tag (i.e. with the same name), it fails.
+
 
 ### warp
 
@@ -53,52 +75,19 @@ warp [tagname]
 Equivalent to `cd [tagged-directory]` with `[tagged-directory]` the directory identified by the tag.
 <br>In this case, `[tagname]` is a mandatory argument.
 
-### retag
-
-Rename an existing tag in the taglist.
-
-```bash
-retag [tagname] newname
-```
-
-`[tagname]` is an optional argument, whereas `newname` must be provided. <br>If you are in a tagged directory, and only one argument is passed, the tag associated to current directory will be renamed to the tagname provided.
-
-Additional examples:
-
-```bash
-retag mydir           # retags current directory, if tagged, to `mydir`
-retag thisdir mydir   # retags `thisdir` to `mydir`
-```
-
 ### tags
 
 Lists all tags in the taglist.
 
 ---
 
-## Refactoring notes and caveats
+## Undocumented breaking changes
 
-The master branch of this repository contains my personal take (and subsequent refactoring) of the original `.warpdrive` script. And, as strange as it seems, it does **not** provide full backwards compatibility with it.
+Apart from the behaviour explained above (which may differ with the original, `0.1.x`, versions of `warpdrive`), and unexposed internal reworkings, the refactored implementation of this script does not differ from the original, **with the sole exception** of the following caveat (undocumented in the original version).
 
-In particular, both the `untag` and `retag` functions has been implemented (compatibly between themselves) differently, as explained.
-<br>The original script assumes the tag of current directory (if eixstent) as the optional tag **both**
-1) when the optional tag has not been specified by the user;
-2) when the optional tag has been explicitly specified by the user **but** it does not exist.
-
-The refactored version of the script does this only in case 1. , failing in case 2. .
-
-Another breaking change is present with regards to multiply-tagged directories.
-<br> The script does allow to tag the same directory with multiple, differently-named tags. When invoking the `untag` command with no arguments, from a directory among these, the **last** tag in alphabetical order is selected as the one to be removed.
-
-The refactored version replicates this behaviour for the sake of command essentiality, but deleting the **first** of the tags, in alphabetical order.
-
-This may be useful - at the cost of additional failures - to guard the user against accidental (existent) tag deletions when invoking nonexistent tag deletion from a tagged directory.
-
-The `tag` function has been enhanced in a non-breaking way. It is now possible to tag directories while not being inside them, just by passing the full path as a second argument. The one-argument version is fully backwards-compatible.
-
-This allows, at the cost of a warning, to even tag non-already-existing directories, which may be useful in scripts or with automatically-generated paths.
-
-The remaining, minor, changes are non-breaking and mainly revolve around improved robustness against paths with spaces, improved documentation, better compatibility with shells installed in non-standard locations, typesetting enhancements
+If **a directory is referenced by multiple tags** and it is asked to **remove the tag associated with it**:
+- In the *original version*, the tag whose name is **last** in alphabetic order is removed.
+- In the *refactored version*, the tag whose name is **first** in alphabetic order is removed.
 
 ---
 
@@ -107,4 +96,4 @@ The remaining, minor, changes are non-breaking and mainly revolve around improve
 Originally based on Jeroen Janssens' `jumper`.
 
 Original codebase by Joeri Hermans
-<br>Retag functionality by Benjamin Shanahan
+<br>Original retag functionality by Benjamin Shanahan
