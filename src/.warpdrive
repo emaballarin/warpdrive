@@ -48,7 +48,6 @@ elif [ ! -z "$BASH_VERSION" ]; then
     }
     # Bind the autocomplete to the following commands.
     complete -F _bash_auto_complete warp tag untag retag
-    echo BASH
 
 else # (or in case of error; i.e. csh)
     :   # Do nothing, no autocompletion
