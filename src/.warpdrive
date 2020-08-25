@@ -293,8 +293,12 @@ function retag {
 
 
 function tags {
-    echo "$(eval $set_bold)Listing available tags and destinations:$(eval $reset_colors)"
-    ls -l "$WARP_LOCATIONS" | sed 's/  / /g' | cut -d' ' -f9-   # sed/cut magic: double spaces to spaces; remove first 9 information `slots` and their spaces
-    echo ' '                                                    # Result: [tag name] -> [tag full path]
-    eval $reset_colors
+    if [ -z "$(ls -A $WARP_LOCATIONS)" ]; then
+        echo "No tags available."
+    else
+        echo "$(eval $set_bold)Listing available tags and destinations:$(eval $reset_colors)"
+        ls -l "$WARP_LOCATIONS" | sed 's/  / /g' | cut -d' ' -f9-   # sed/cut magic: double spaces to spaces; remove first 9 information `slots` and their spaces
+        echo ' '                                                    # Result: [tag name] -> [tag full path]
+        eval $reset_colors
+    fi
 }

@@ -1,6 +1,6 @@
 # Tag And Warp (a.k.a. `warpdrive`)
 
-Easily tag locations in *deep space* (directories) and easily *warp* (like the *space drive*) to them with a few keystrokes.
+Easily tag locations in *deep space* (directories) and *warp* (like the *space drive*) to them with a few keystrokes.
 <br>Now refactored (`v. 0.2+`) *a.k.a. overengineered*, but still stable.
 
 **NOTICE:** While this *piece of software* shares the name, and the original codebase, with the [*original* `warpdrive`](https://github.com/JoeriHermans/warpdrive), it has been heavily refactored in its internals. The features has been preserved as similar to the original as possible, but some breaking changes are present nevertheless.
